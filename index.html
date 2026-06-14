@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ka Naung Tech | The Quantum Frontier</title>
+    <!-- Three.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <style>
         :root {
             --bg-color: #050508;
@@ -14,6 +16,7 @@
             --text-main: #E0E0E0;
             --text-muted: #A0A0A0;
             --font-stack: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --glow-color: rgba(0, 240, 255, 0.4);
         }
 
         * {
@@ -34,6 +37,24 @@
             line-height: 1.6;
         }
 
+        /* --- 3D Background Canvas --- */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none; /* Let users click elements through canvas */
+            transition: opacity 1.5s ease;
+        }
+
+        /* --- Content Wrappers for Layering --- */
+        nav, header, section, footer {
+            position: relative;
+            z-index: 2; /* Sit on top of 3D canvas */
+        }
+
         /* --- Navigation --- */
         nav {
             display: flex;
@@ -46,6 +67,12 @@
             width: 100%;
             z-index: 100;
             border-bottom: 1px solid var(--palace-gold-dim);
+            transition: border-color 1s ease, box-shadow 1s ease;
+        }
+
+        nav.systems-active {
+            border-bottom: 1px solid var(--quantum-cyan);
+            box-shadow: 0 5px 25px rgba(0, 240, 255, 0.15);
         }
 
         .logo {
@@ -54,6 +81,11 @@
             color: var(--palace-gold);
             letter-spacing: 2px;
             text-transform: uppercase;
+            transition: text-shadow 0.5s ease;
+        }
+
+        .systems-active .logo {
+            text-shadow: 0 0 15px var(--palace-gold);
         }
 
         .nav-links {
@@ -84,8 +116,8 @@
             align-items: center;
             text-align: center;
             position: relative;
-            padding: 100px 20px 20px; /* Top padding to account for fixed nav */
-            background: radial-gradient(circle at center, #11111a 0%, #050508 100%);
+            padding: 100px 20px 20px;
+            background: radial-gradient(circle at center, rgba(17, 17, 26, 0.6) 0%, #050508 100%);
             overflow: hidden;
         }
 
@@ -102,6 +134,12 @@
                 repeating-linear-gradient(90deg, transparent, transparent 40px, var(--palace-gold) 40px, var(--palace-gold) 41px);
             z-index: 0;
             animation: gridMove 20s linear infinite;
+            transition: filter 1s ease;
+        }
+
+        .systems-active .hero-bg {
+            opacity: 0.25;
+            filter: hue-rotate(45deg) saturate(1.5);
         }
 
         @keyframes gridMove {
@@ -122,6 +160,11 @@
             margin-bottom: 25px;
             position: relative;
             display: inline-block;
+            transition: text-shadow 0.5s ease;
+        }
+
+        .systems-active .palace-motif {
+            text-shadow: 0 0 10px var(--palace-gold);
         }
 
         .palace-motif::before, .palace-motif::after {
@@ -145,6 +188,11 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-shadow: 0 0 30px rgba(0, 240, 255, 0.2);
+            transition: text-shadow 0.5s ease;
+        }
+
+        .systems-active h1 {
+            text-shadow: 0 0 50px rgba(0, 240, 255, 0.4), 0 0 20px rgba(212, 175, 55, 0.3);
         }
 
         .hero-subtitle {
@@ -154,6 +202,10 @@
             max-width: 800px;
             margin-left: auto;
             margin-right: auto;
+            background: rgba(5, 5, 8, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            backdrop-filter: blur(5px);
         }
 
         .cta-btn {
@@ -168,23 +220,74 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
-            transition: all 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            overflow: hidden;
         }
 
         .cta-btn:hover {
             box-shadow: 0 0 40px rgba(0, 240, 255, 0.8);
-            transform: translateY(-3px);
+            transform: scale(1.05) translateY(-3px);
             background-color: #fff;
+        }
+
+        .cta-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Style when initialized */
+        .cta-btn.active-state {
+            background-color: var(--palace-gold);
+            color: #000;
+            box-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+        }
+
+        /* --- System Status Banner --- */
+        #system-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(5, 5, 8, 0.9);
+            border: 1px solid var(--palace-gold-dim);
+            padding: 12px 20px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            z-index: 1000;
+            transform: translateY(150%);
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.5s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--palace-gold);
+        }
+
+        #system-status.show {
+            transform: translateY(0);
+        }
+
+        #system-status .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--quantum-cyan);
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 8px var(--quantum-cyan); }
         }
 
         /* --- Manifesto Section (Vision & Mission) --- */
         .manifesto {
             padding: 100px 50px;
-            background: linear-gradient(to bottom, #050508, #0a0a12);
+            background: linear-gradient(to bottom, rgba(5, 5, 8, 0.8), rgba(10, 10, 18, 0.9));
             position: relative;
             z-index: 10;
             border-top: 1px solid var(--palace-gold-dim);
             border-bottom: 1px solid var(--palace-gold-dim);
+            backdrop-filter: blur(8px);
         }
 
         .manifesto-container {
@@ -197,11 +300,18 @@
 
         .text-block {
             max-width: 800px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 35px;
+            border-radius: 8px;
+            border-left: 3px solid var(--palace-gold);
+            backdrop-filter: blur(5px);
         }
 
         .text-block.right {
             align-self: flex-end;
             text-align: right;
+            border-left: none;
+            border-right: 3px solid var(--quantum-cyan);
         }
 
         .manifesto-label {
@@ -255,7 +365,8 @@
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.02);
+            background: rgba(5, 5, 8, 0.75);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.05);
             padding: 50px 40px;
             border-radius: 8px;
@@ -314,6 +425,8 @@
             color: #666;
             font-size: 0.9rem;
             background: #020204;
+            position: relative;
+            z-index: 10;
         }
 
         .footer-logo {
@@ -368,7 +481,7 @@
             .section-header h2 { font-size: 2.2rem; }
 
             .grid {
-                grid-template-columns: 1fr; /* Stack cards on mobile */
+                grid-template-columns: 1fr;
             }
 
             .card {
@@ -385,7 +498,16 @@
 </head>
 <body>
 
-    <nav>
+    <!-- 3D Canvas Target -->
+    <div id="canvas-container"></div>
+
+    <!-- Status Banner -->
+    <div id="system-status">
+        <div class="status-dot"></div>
+        <span id="status-text">SYSTEM COLD // STANDBY</span>
+    </div>
+
+    <nav id="top-nav">
         <div class="logo">Ka Naung Tech</div>
         <div class="nav-links">
             <a href="#vision">Vision</a>
@@ -399,11 +521,11 @@
         <div class="hero-bg"></div>
         <div class="hero-content">
             <div class="palace-motif">The Royal Heritage of Innovation</div>
-            <h1>Architecting the<br>Quantum Future</h1>
+            <h1 id="hero-title">Architecting the<br>Quantum Future</h1>
             <p class="hero-subtitle">
                 Rooted in the industrial genius of the Mandalay Palace's Crown Prince. We fuse advanced human psychology, quantum mechanics, and mobile-first software to engineer the sentient technologies of tomorrow.
             </p>
-            <button class="cta-btn">Initialize Systems</button>
+            <button class="cta-btn" id="init-btn">Initialize Systems</button>
         </div>
     </header>
 
@@ -465,5 +587,588 @@
         <p>&copy; 2026 Ka Naung Tech. Conceived in Mandalay. Engineered for the Universe.</p>
     </footer>
 
+    <!-- Three.js + Web Audio interactive logic -->
+    <script>
+        // --- System State ---
+        let systemsActive = false;
+        const initBtn = document.getElementById('init-btn');
+        const systemStatus = document.getElementById('system-status');
+        const statusText = document.getElementById('status-text');
+        const topNav = document.getElementById('top-nav');
+
+        // --- Synth Sound FX on System Initialization ---
+        function playBootSynth() {
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (!AudioContext) return;
+                const ctx = new AudioContext();
+
+                // Build a gorgeous polyphonic royal cyber-chord sequence
+                const playChime = (freq, type, delay, duration, gainValue) => {
+                    setTimeout(() => {
+                        const osc = ctx.createOscillator();
+                        const gainNode = ctx.createGain();
+                        
+                        osc.type = type;
+                        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+                        
+                        // Cyber filter sweep
+                        const filter = ctx.createBiquadFilter();
+                        filter.type = 'lowpass';
+                        filter.Q.value = 8;
+                        filter.frequency.setValueAtTime(100, ctx.currentTime);
+                        filter.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + duration * 0.5);
+
+                        gainNode.gain.setValueAtTime(0, ctx.currentTime);
+                        gainNode.gain.linearRampToValueAtTime(gainValue, ctx.currentTime + 0.05);
+                        gainNode.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+
+                        osc.connect(filter);
+                        filter.connect(gainNode);
+                        gainNode.connect(ctx.destination);
+
+                        osc.start();
+                        osc.stop(ctx.currentTime + duration);
+                    }, delay);
+                };
+
+                // Root: C3 (130.81Hz), Major Third: E3 (164.81Hz), Fifth: G3 (196.00Hz), Octave: C4 (261.63Hz), High chime: C5 (523.25Hz)
+                playChime(130.81, 'sawtooth', 0, 1.5, 0.15); // Deep synth pad root
+                playChime(164.81, 'triangle', 150, 1.8, 0.12);
+                playChime(196.00, 'triangle', 300, 1.8, 0.12);
+                playChime(261.63, 'sawtooth', 450, 2.0, 0.1);
+                playChime(523.25, 'sine', 600, 2.5, 0.25); // Celestial chime
+                playChime(1046.50, 'sine', 750, 2.0, 0.15); // Sparkling high-frequency ring
+            } catch (e) {
+                console.warn('Audio Context failed or was blocked by browser permissions:', e);
+            }
+        }
+
+        // --- Three.js Setup ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2('#050508', 0.035);
+
+        // Responsive Camera
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.z = 15;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        // --- Dynamic Canvas Textures for Mac Screens ---
+        // Creates procedural dynamic matrix code stream for screens
+        const screenCanvases = [];
+        const screenTextures = [];
+        const numMacs = 3;
+
+        function createScreenCanvas(index) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            
+            // Initial screen state (system off)
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, 256, 256);
+            ctx.fillStyle = index === 0 ? '#D4AF37' : '#00F0FF';
+            ctx.font = 'bold 20px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText('SYSTEM COLD', 128, 135);
+            ctx.strokeStyle = ctx.fillStyle;
+            ctx.strokeRect(10, 10, 236, 236);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            screenCanvases.push({ canvas, ctx, active: false, lines: [], bootProgress: 0, mode: index });
+            screenTextures.push(texture);
+            return texture;
+        }
+
+        // --- Custom Procedural 3D Mac Computer Builder ---
+        function createMac3D(index) {
+            const macGroup = new THREE.Group();
+
+            // Materials
+            const bodyMat = new THREE.MeshStandardMaterial({
+                color: index === 0 ? 0xD4AF37 : 0x1c1e24, // Gold royal Mac vs Cyber Navy-Dark Macs
+                metalness: index === 0 ? 0.9 : 0.6,
+                roughness: index === 0 ? 0.15 : 0.4,
+                bumpScale: 0.05
+            });
+
+            const bezelMat = new THREE.MeshStandardMaterial({
+                color: 0x0a0a0d,
+                roughness: 0.5
+            });
+
+            // 1. Main Classic Mac Cabinet (CRT Housing)
+            const cabinetGeo = new THREE.BoxGeometry(3.5, 4.0, 3.8);
+            const cabinet = new THREE.Mesh(cabinetGeo, bodyMat);
+            macGroup.add(cabinet);
+
+            // 2. Beveled Front Face Inset
+            const bezelGeo = new THREE.BoxGeometry(3.2, 3.7, 0.4);
+            const bezel = new THREE.Mesh(bezelGeo, bezelMat);
+            bezel.position.set(0, 0, 1.8);
+            macGroup.add(bezel);
+
+            // 3. CRT Screen
+            const screenGeo = new THREE.PlaneGeometry(2.6, 2.0);
+            const screenTex = createScreenCanvas(index);
+            const screenMat = new THREE.MeshBasicMaterial({
+                map: screenTex,
+                side: THREE.DoubleSide
+            });
+            const screen = new THREE.Mesh(screenGeo, screenMat);
+            screen.position.set(0, 0.4, 2.01);
+            macGroup.add(screen);
+
+            // 4. Keyboard Base / Lower lip profile (Iconic classic Mac notch)
+            const lipGeo = new THREE.BoxGeometry(3.2, 0.6, 0.5);
+            const lip = new THREE.Mesh(lipGeo, bodyMat);
+            lip.position.set(0, -1.5, 2.0);
+            macGroup.add(lip);
+
+            // 5. Floppy Disk Drive slot
+            const slotGeo = new THREE.BoxGeometry(1.2, 0.08, 0.1);
+            const slotMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+            const slot = new THREE.Mesh(slotGeo, slotMat);
+            slot.position.set(0.7, -1.1, 2.01);
+            macGroup.add(slot);
+
+            // 6. Base / Pedestal Stand
+            const standGeo = new THREE.BoxGeometry(2.0, 0.3, 2.0);
+            const stand = new THREE.Mesh(standGeo, bodyMat);
+            stand.position.set(0, -2.1, 0);
+            macGroup.add(stand);
+
+            // Scale configuration helper
+            macGroup.scale.set(1, 1, 1);
+
+            return {
+                mesh: macGroup,
+                baseY: 0,
+                targetY: 0,
+                baseX: 0,
+                targetX: 0,
+                baseZ: 0,
+                targetZ: 0,
+                rotY: 0,
+                rotX: 0,
+                bobFreq: 0.001 + (index * 0.0005),
+                bobAmp: 0.3 + (index * 0.1)
+            };
+        }
+
+        // Spawn 3 Macs placed strategically down the page
+        const macs = [];
+        for (let i = 0; i < numMacs; i++) {
+            const macData = createMac3D(i);
+            scene.add(macData.mesh);
+            macs.push(macData);
+        }
+
+        // Set initial resting coordinates (designed gracefully for desktop viewports)
+        // Mac 0 (Royal gold) resides in the Hero section header
+        macs[0].baseX = 3.5;
+        macs[0].baseY = 1.0;
+        macs[0].baseZ = 4.0;
+        macs[0].rotY = -0.4;
+
+        // Mac 1 (Cyber blue) floats by the Manifesto section
+        macs[1].baseX = -4.0;
+        macs[1].baseY = -10.0;
+        macs[1].baseZ = 3.0;
+        macs[1].rotY = 0.5;
+
+        // Mac 2 (Quantum cyan) hovers around Pillars section
+        macs[2].baseX = 4.2;
+        macs[2].baseY = -21.0;
+        macs[2].baseZ = 2.5;
+        macs[2].rotY = -0.6;
+
+        // Synchronize Initial Positioning
+        macs.forEach(m => {
+            m.mesh.position.set(m.baseX, m.baseY, m.baseZ);
+            m.mesh.rotation.y = m.rotY;
+        });
+
+        // --- Ambient Starfield / Quantum Particle Network ---
+        const particleCount = 200;
+        const particleGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        const goldColor = new THREE.Color('#D4AF37');
+        const cyanColor = new THREE.Color('#00F0FF');
+
+        for (let i = 0; i < particleCount * 3; i += 3) {
+            // Space particles deeply along the scroll path (from Y=5 to Y=-35)
+            positions[i] = (Math.random() - 0.5) * 35;
+            positions[i + 1] = (Math.random() - 0.5) * 50 - 10;
+            positions[i + 2] = (Math.random() - 0.5) * 20 - 5;
+
+            // Blend colors beautifully
+            const mix = Math.random();
+            const chosenColor = goldColor.clone().lerp(cyanColor, mix);
+            colors[i] = chosenColor.r;
+            colors[i + 1] = chosenColor.g;
+            colors[i + 2] = chosenColor.b;
+        }
+
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particleGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const particleMaterial = new THREE.PointsMaterial({
+            size: 0.12,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+
+        const starfield = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(starfield);
+
+        // --- Lights ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+        scene.add(ambientLight);
+
+        // Gold light tracking Mac 0
+        const goldLight = new THREE.PointLight(0xD4AF37, 2, 15);
+        goldLight.position.set(5, 3, 6);
+        scene.add(goldLight);
+
+        // Cyan light tracking lower sectors
+        const cyanLight = new THREE.PointLight(0x00F0FF, 2, 18);
+        cyanLight.position.set(-5, -12, 5);
+        scene.add(cyanLight);
+
+        // Direct sunlight highlight
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
+        dirLight.position.set(5, 15, 10);
+        scene.add(dirLight);
+
+        // --- Interactive Mouse tracking ---
+        let mouseX = 0;
+        let mouseY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) - 0.5;
+            mouseY = (e.clientY / window.innerHeight) - 0.5;
+        });
+
+        // --- Screen Dynamic Canvas Content Manager ---
+        function updateScreenContent(time, index) {
+            const data = screenCanvases[index];
+            if (!data) return;
+
+            const ctx = data.ctx;
+            const w = 256;
+            const h = 256;
+
+            // Solid background clean
+            ctx.fillStyle = '#050508';
+            ctx.fillRect(0, 0, w, h);
+
+            if (!data.active) {
+                // OFF standby animation (Subtle flickering scanning lines)
+                ctx.fillStyle = 'rgba(212, 175, 55, 0.05)';
+                ctx.fillRect(0, 0, w, h);
+                ctx.strokeStyle = index === 0 ? 'rgba(212, 175, 55, 0.4)' : 'rgba(0, 240, 255, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(10, 10, w - 20, h - 20);
+
+                // Scanning static lines
+                ctx.fillStyle = index === 0 ? 'rgba(212,175,55,0.08)' : 'rgba(0,240,255,0.08)';
+                const scanLineY = (time * 0.1) % h;
+                ctx.fillRect(10, scanLineY, w - 20, 6);
+
+                ctx.fillStyle = index === 0 ? '#D4AF37' : '#00F0FF';
+                ctx.font = 'bold 15px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('STANDBY', w / 2, h / 2 - 10);
+                ctx.font = '11px monospace';
+                ctx.fillText('INITIALIZE SYSTEM', w / 2, h / 2 + 15);
+                
+                screenTextures[index].needsUpdate = true;
+                return;
+            }
+
+            // --- ONLINE STATE ---
+            // Render cyber grid background
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.07)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < w; i += 20) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0); ctx.lineTo(i, h);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i); ctx.lineTo(w, i);
+                ctx.stroke();
+            }
+
+            const primaryColor = index === 0 ? '#D4AF37' : '#00F0FF';
+            const accentColor = index === 0 ? '#00F0FF' : '#8A2BE2';
+
+            // Custom Display Screens based on section duties
+            if (data.mode === 0) {
+                // --- ROYAL CORE CORE (Mac 0) ---
+                ctx.fillStyle = primaryColor;
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('KA NAUNG CORE v2.6', w / 2, 40);
+
+                // Draw central oscillating quantum wave
+                ctx.strokeStyle = accentColor;
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let x = 15; x < w - 15; x++) {
+                    const y = h / 2 + Math.sin(x * 0.08 + time * 0.01) * 25 * Math.sin(time * 0.002);
+                    if (x === 15) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Telemetry metrics
+                ctx.font = '10px monospace';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillText(`Q-ENTANGLEMENT: ACTIVE`, w / 2, h - 55);
+                ctx.fillStyle = primaryColor;
+                ctx.fillText(`LATENCY: 0.000${Math.floor(Math.sin(time * 0.01) * 3 + 6)}ms`, w / 2, h - 35);
+
+            } else if (data.mode === 1) {
+                // --- EMOTIVE AI COGNITIVE CORE (Mac 1) ---
+                ctx.fillStyle = primaryColor;
+                ctx.font = 'bold 15px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('COGNITIVE BRAIN', w / 2, 35);
+
+                // Generate dynamic cybernetic facial / synaptic web vectors
+                const centerX = w / 2;
+                const centerY = h / 2 + 10;
+                ctx.strokeStyle = primaryColor;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 40 + Math.sin(time * 0.005) * 5, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Draw pulsing synapse nodes
+                for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+                    const offset = 40 + Math.sin(time * 0.005) * 5;
+                    const nx = centerX + Math.cos(a) * offset;
+                    const ny = centerY + Math.sin(a) * offset;
+                    ctx.fillStyle = accentColor;
+                    ctx.beginPath();
+                    ctx.arc(nx, ny, 4 + Math.sin(time * 0.02 + a) * 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '9px monospace';
+                ctx.fillText('EMPATHY CALIBRATION: OK', w / 2, h - 35);
+
+            } else {
+                // --- QUANTUM HARDWARE MATRIX (Mac 2) ---
+                ctx.fillStyle = primaryColor;
+                ctx.font = 'bold 14px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('MATRIX FLUX SOLVER', w / 2, 35);
+
+                // Generate digital waterfalls/matrix drops
+                ctx.fillStyle = 'rgba(0, 240, 255, 0.2)';
+                ctx.fillRect(15, 50, w - 30, h - 100);
+
+                ctx.fillStyle = primaryColor;
+                ctx.font = '8px monospace';
+                ctx.textAlign = 'left';
+                for (let row = 0; row < 8; row++) {
+                    let binaryStr = '';
+                    for (let col = 0; col < 22; col++) {
+                        binaryStr += Math.random() > 0.5 ? '1' : '0';
+                    }
+                    ctx.fillText(binaryStr, 25, 65 + row * 12);
+                }
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('MEISSNER SEISMIC SENSOR', w / 2, h - 35);
+            }
+
+            // Beautiful screen border overlay
+            ctx.strokeStyle = primaryColor;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(8, 8, w - 16, h - 16);
+
+            screenTextures[index].needsUpdate = true;
+        }
+
+        // --- System Activation Function ---
+        function activateSystems() {
+            if (systemsActive) return;
+            systemsActive = true;
+
+            // Visual layout powerup transitions
+            document.body.classList.add('systems-active');
+            topNav.classList.add('systems-active');
+            initBtn.classList.add('active-state');
+            initBtn.innerText = "SYSTEMS ONLINE";
+            
+            // Show status toast
+            systemStatus.classList.add('show');
+            statusText.innerText = "SYSTEMS ACTIVE // ROYAL FRONT";
+
+            // Power up sound synth
+            playBootSynth();
+
+            // Set screen canvas loops into high gear
+            screenCanvases.forEach(canvas => canvas.active = true);
+
+            // Animate Macs physically floating closer & doing an initial spin!
+            macs.forEach((mac, idx) => {
+                // Slide coordinates in for dramatic entry
+                mac.targetX = mac.baseX;
+                mac.targetY = mac.baseY;
+                mac.targetZ = mac.baseZ + 1.5; // push slightly closer
+                
+                // Add an elegant spin force
+                mac.mesh.rotation.y += Math.PI * 2;
+            });
+        }
+
+        // Add event listener to the Initialize Button
+        initBtn.addEventListener('click', () => {
+            activateSystems();
+        });
+
+        // --- Scroll Tracking Logic ---
+        let lastScrollY = window.scrollY;
+        
+        // Handle physical movement based on scrolling
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+            const scrollPercent = scrollY / (maxScroll || 1);
+
+            // Map standard scroll dynamics to 3D elements
+            // Mac 0 (Hero): Moves right, floats back, spins slightly
+            macs[0].targetY = macs[0].baseY - (scrollY * 0.01);
+            macs[0].targetX = macs[0].baseX + (scrollY * 0.005);
+            macs[0].targetZ = macs[0].baseZ - (scrollY * 0.005);
+            macs[0].rotY = -0.4 - (scrollPercent * 2.5);
+
+            // Mac 1 (Manifesto): Slides left to right, floats downward
+            macs[1].targetY = macs[1].baseY - ((scrollY - window.innerHeight) * 0.003);
+            macs[1].targetX = macs[1].baseX + (scrollPercent * 6.0);
+            macs[1].rotY = 0.5 + (scrollPercent * 3.0);
+
+            // Mac 2 (Pillars): Glides up closer as user nears the footer
+            macs[2].targetY = macs[2].baseY + (scrollPercent * 3.5);
+            macs[2].targetX = macs[2].baseX - (scrollPercent * 4.0);
+            macs[2].rotY = -0.6 - (scrollPercent * 1.5);
+
+            // Shift camera vertical focus slightly based on scroll
+            camera.position.y = -(scrollPercent * 28.0);
+
+            lastScrollY = scrollY;
+        });
+
+        // --- Render Animation Loop ---
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const elapsedTime = clock.getElapsedTime() * 100;
+            const time = clock.getElapsedTime();
+
+            // Parallax offset based on cursor coordinate inputs
+            const targetCamX = mouseX * 4;
+            const targetCamY = (-mouseY * 4) - (window.scrollY / (document.documentElement.scrollHeight - window.innerHeight || 1) * 28.0);
+            
+            // Interpolate camera for smooth tracking feel
+            camera.position.x += (targetCamX - camera.position.x) * 0.05;
+            camera.position.y += (targetCamY - camera.position.y) * 0.05;
+            camera.lookAt(0, camera.position.y, 0);
+
+            // Update procedural screen graphics
+            for (let i = 0; i < numMacs; i++) {
+                updateScreenContent(elapsedTime, i);
+            }
+
+            // Animate Mac floating matrices (Dynamic Bobbing & Slide Tracking)
+            macs.forEach((mac, i) => {
+                // Bobbing cycle (sine calculations)
+                const bob = Math.sin(time * 1.8 + i * 2.0) * mac.bobAmp;
+
+                // Smoothly interpolate positions to targets
+                const currentTargetY = (systemsActive ? mac.targetY : mac.baseY) + bob;
+                const currentTargetX = systemsActive ? mac.targetX : mac.baseX;
+                const currentTargetZ = systemsActive ? mac.targetZ : mac.baseZ;
+
+                mac.mesh.position.y += (currentTargetY - mac.mesh.position.y) * 0.08;
+                mac.mesh.position.x += (currentTargetX - mac.mesh.position.x) * 0.08;
+                mac.mesh.position.z += (currentTargetZ - mac.mesh.position.z) * 0.08;
+
+                // Interpolate rotations smoothly
+                const targetRotY = mac.rotY + (mouseX * 0.5); // Add cursor responsive tilt
+                const targetRotX = mouseY * 0.3;
+
+                mac.mesh.rotation.y += (targetRotY - mac.mesh.rotation.y) * 0.05;
+                mac.mesh.rotation.x += (targetRotX - mac.mesh.rotation.x) * 0.05;
+            });
+
+            // Rotate starfield/quantum particles network slowly
+            starfield.rotation.y = time * 0.015;
+            starfield.rotation.x = time * 0.005;
+
+            renderer.render(scene, camera);
+        }
+
+        // --- Screen Resizer Support ---
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // Responsive layout offsets
+            if (window.innerWidth < 768) {
+                macs[0].baseX = 0;
+                macs[0].baseY = 3.5;
+                macs[0].baseZ = 2.0;
+
+                macs[1].baseX = 0;
+                macs[1].baseY = -12.0;
+
+                macs[2].baseX = 0;
+                macs[2].baseY = -23.0;
+            } else {
+                macs[0].baseX = 3.5;
+                macs[0].baseY = 1.0;
+                macs[0].baseZ = 4.0;
+
+                macs[1].baseX = -4.0;
+                macs[1].baseY = -10.0;
+
+                macs[2].baseX = 4.2;
+                macs[2].baseY = -21.0;
+            }
+        });
+
+        // Trigger initial responsive setup check on startup
+        if (window.innerWidth < 768) {
+            macs[0].baseX = 0; macs[0].baseY = 3.5; macs[0].baseZ = 2.0;
+            macs[1].baseX = 0; macs[1].baseY = -12.0;
+            macs[2].baseX = 0; macs[2].baseY = -23.0;
+            macs.forEach(m => m.mesh.position.set(m.baseX, m.baseY, m.baseZ));
+        }
+
+        // Initialize Scene Render loop after DOM readiness
+        window.onload = function() {
+            animate();
+        };
+    </script>
 </body>
 </html>
